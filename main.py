@@ -8,13 +8,28 @@ import pandas as pd
 st.set_page_config(layout="wide",page_title="Recommendation System")
 
 with st.sidebar:
-    selected = option_menu(
+    selected_model = option_menu(
         menu_title = "Model",
         options = ["Wide & Deep Learning Model", "K-Nearest Neighbors (KNN)", "Matrix Factorization"],
         icons = ["caret-right-square-fill", "caret-right-square-fill", "caret-right-square-fill"],
-        menu_icon = "app",
+        menu_icon = "layout-text-sidebar",
         default_index = 0,
     )
+
+    recommendation_df = pd.read_parquet('./data/recommendation/wide_deep_recommendation.parquet')
+
+    user_df = recommendation_df.drop_duplicates('user_id')[['user_id']].reset_index(drop=True)
+    user_option = user_df['user_id'].to_list()
+
+    selected_user = st.selectbox("Please select an user", options = user_option)
+
+    # selected_user2 = option_menu(
+    #     menu_title = "User",
+    #     options = st.selectbox("Please select an user", options = user_option),
+    #     icons = ["caret-right-square-fill", "caret-right-square-fill", "caret-right-square-fill"],
+    #     menu_icon = "app",
+    #     default_index = 0,
+    # )
 
 def evaluation(evaluation_df, user_id):
     model_result = evaluation_df[evaluation_df.user_id == user_id].reset_index(drop=True)
@@ -26,7 +41,7 @@ def evaluation(evaluation_df, user_id):
     st.write("**Mean Absolute Error (MAE)**: {mae:.4f}, **Mean Squared Error (MSE)**: {mse:.4f}, **Root Mean Squared Error (RMSE)**: {rmse:.4f}"
                 .format(mae=mae, mse=mse, rmse=rmse))
 
-def recommendation_page(recommendation_df, evaluation_df, selected):
+def recommendation_page(recommendation_df, evaluation_df, selected_model, selected_user):
     precision_recall_k = evaluation_df[evaluation_df.top_k == 30].reset_index(drop=True)
 
     precision_at_k = precision_recall_k.iloc[0]['precision']
@@ -35,22 +50,24 @@ def recommendation_page(recommendation_df, evaluation_df, selected):
     st.write('**precision_at_k:** {precision_at_k:.4f}, **recall_at_k:** {recall_at_k:.4f}'.format(precision_at_k=precision_at_k, recall_at_k=recall_at_k))
 
     st.subheader("**User**")
-    user_df = recommendation_df.drop_duplicates('user_id')[['user_id']].reset_index(drop=True)
-    user_option = user_df['user_id'].to_list()
+    # user_df = recommendation_df.drop_duplicates('user_id')[['user_id']].reset_index(drop=True)
+    # user_option = user_df['user_id'].to_list()
 
-    user_selected = st.selectbox("Please select an user", options = user_option)
+    # user_selected = st.selectbox("Please select an user", options = user_option)
 
-    if selected == "Wide & Deep Learning Model":
+    if selected_model == "Wide & Deep Learning Model":
         wide_deep_metric = pd.read_parquet('./data/evaluation/wide_deep_metric.parquet')
-        evaluation(wide_deep_metric, user_selected)
+        st.write("**User ID:** {selected_user}".format(selected_user=selected_user))
+        evaluation(wide_deep_metric, selected_user)
 
-    elif selected == "Matrix Factorization":
+    elif selected_model == "Matrix Factorization":
         matrix_fact_metric = pd.read_parquet('./data/evaluation/matrix_fact_metric.parquet')
-        evaluation(matrix_fact_metric, user_selected)
+        st.write(f"User ID: {selected_user}")
+        evaluation(matrix_fact_metric, selected_user)
 
     i = 0
     
-    recommend_item = recommendation_df[recommendation_df.user_id == user_selected]
+    recommend_item = recommendation_df[recommendation_df.user_id == selected_user]
     # st.dataframe(recommend_item)
 
     row1 = st.columns(5)
@@ -71,8 +88,8 @@ def recommendation_page(recommendation_df, evaluation_df, selected):
 
         i+=1
 
-if selected == "Wide & Deep Learning Model":
-    st.title(f"{selected}")
+if selected_model == "Wide & Deep Learning Model":
+    st.title(f"{selected_model}")
 
     # evaluation metrics
     wide_deep_metric = pd.read_parquet('./data/evaluation/wide_deep_metric.parquet')
@@ -82,11 +99,11 @@ if selected == "Wide & Deep Learning Model":
     
     st.subheader("**Model Evaluation**")
     evaluation(wide_deep_metric, "model")
-    recommendation_page(recommendation_df, df_evaluation_wide_deep_avg, selected)
+    recommendation_page(recommendation_df, df_evaluation_wide_deep_avg, selected_model, selected_user)
 
 
-if selected == "K-Nearest Neighbors (KNN)":
-    st.title(f"{selected}")
+if selected_model == "K-Nearest Neighbors (KNN)":
+    st.title(f"{selected_model}")
 
     # evaluation metrics
     # wide_deep_metric = pd.read_parquet('./data/evaluation/wide_deep_metric.parquet')
@@ -95,10 +112,10 @@ if selected == "K-Nearest Neighbors (KNN)":
     recommendation_df = pd.read_parquet('./data/recommendation/knn_recommendation.parquet')
     
     st.subheader("**Model Evaluation**")
-    recommendation_page(recommendation_df, df_evaluation_knn_avg, selected)
+    recommendation_page(recommendation_df, df_evaluation_knn_avg, selected_model, selected_user)
 
-if selected == "Matrix Factorization":
-    st.title(f"{selected}")
+if selected_model == "Matrix Factorization":
+    st.title(f"{selected_model}")
 
     # evaluation metrics
     matrix_fact_metric = pd.read_parquet('./data/evaluation/matrix_fact_metric.parquet')
@@ -108,5 +125,5 @@ if selected == "Matrix Factorization":
     
     st.subheader("**Model Evaluation**")
     evaluation(matrix_fact_metric, "model")
-    recommendation_page(recommendation_df, df_evaluation_matrix_fact_avg, selected)
+    recommendation_page(recommendation_df, df_evaluation_matrix_fact_avg, selected_model, selected_user)
 
