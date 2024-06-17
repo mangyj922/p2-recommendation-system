@@ -65,6 +65,9 @@ def recommendation_page(recommendation_df, evaluation_df, selected_model, select
         st.write(f"User ID: {selected_user}")
         evaluation(matrix_fact_metric, selected_user)
 
+    else:
+        st.write("**User ID:** {selected_user}".format(selected_user=selected_user))
+
     i = 0
     
     recommend_item = recommendation_df[recommendation_df.user_id == selected_user]
