@@ -4,129 +4,244 @@ from streamlit_option_menu import option_menu
 import numpy as np
 import pandas as pd
 
-
 st.set_page_config(layout="wide",page_title="Recommendation System")
 
-with st.sidebar:
-    selected_model = option_menu(
-        menu_title = "Model",
-        options = ["Wide & Deep Learning Model", "K-Nearest Neighbors (KNN)", "Matrix Factorization"],
-        icons = ["caret-right-square-fill", "caret-right-square-fill", "caret-right-square-fill"],
-        menu_icon = "layout-text-sidebar",
-        default_index = 0,
-    )
+user_evaluation_list = pd.read_parquet('./data/user_evaluation/user_evaluation_list.parquet')
+user_evaluation_list = user_evaluation_list.drop(columns=['user_idx']).reset_index()
+user_evaluation_list = user_evaluation_list.rename(columns = {'index':'user_idx'})
+user_evaluation_list['user_idx'] = user_evaluation_list['user_idx'] + 1
+user_evaluation_list['user_idx'] = user_evaluation_list['user_idx'].astype(str).str.zfill(4)
 
-    recommendation_df = pd.read_parquet('./data/recommendation/wide_deep_recommendation.parquet')
+user_transactions = pd.read_parquet('./data/user_evaluation/user_transactions.parquet')
+user_last5_txn = user_transactions.sort_values(['user_id', 'timestamp'],ascending=True).groupby(['user_id']).tail(5)
 
-    user_df = recommendation_df.drop_duplicates('user_id')[['user_id']].reset_index(drop=True)
-    user_option = user_df['user_id'].to_list()
+knn_recommend_items = pd.read_parquet('./data/recommendation/knn_recommend_items.parquet')
+matrix_recommend_items = pd.read_parquet('./data/recommendation/matrix_recommend_items.parquet')
+wide_deep_recommend_items = pd.read_parquet('./data/recommendation/wide_deep_recommend_items.parquet')
 
-    selected_user = st.selectbox("Please select an user", options = user_option)
+user = user_evaluation_list[user_evaluation_list['user_id'] != 'model']['user_idx'].dropna().to_list()
+category = ['All Categories'] + sorted(knn_recommend_items['main_category'].drop_duplicates().to_list())
+store = ['All Stores'] + sorted(knn_recommend_items['store'].drop_duplicates().to_list())
 
-    # selected_user2 = option_menu(
-    #     menu_title = "User",
-    #     options = st.selectbox("Please select an user", options = user_option),
-    #     icons = ["caret-right-square-fill", "caret-right-square-fill", "caret-right-square-fill"],
-    #     menu_icon = "app",
-    #     default_index = 0,
-    # )
-
-def evaluation(evaluation_df, user_id):
-    model_result = evaluation_df[evaluation_df.user_id == user_id].reset_index(drop=True)
-
-    mae = model_result.iloc[0]['mae']
-    mse = model_result.iloc[0]['mse']
-    rmse = model_result.iloc[0]['rmse']
-
-    st.write("**Mean Absolute Error (MAE)**: {mae:.4f}, **Mean Squared Error (MSE)**: {mse:.4f}, **Root Mean Squared Error (RMSE)**: {rmse:.4f}"
-                .format(mae=mae, mse=mse, rmse=rmse))
-
-def recommendation_page(recommendation_df, evaluation_df, selected_model, selected_user):
-    precision_recall_k = evaluation_df[evaluation_df.top_k == 30].reset_index(drop=True)
-
-    precision_at_k = precision_recall_k.iloc[0]['precision']
-    recall_at_k = precision_recall_k.iloc[0]['recall']
+if 'user_list' not in st.session_state:   
+    st.session_state['user_list'] = user
     
-    st.write('**precision_at_k:** {precision_at_k:.4f}, **recall_at_k:** {recall_at_k:.4f}'.format(precision_at_k=precision_at_k, recall_at_k=recall_at_k))
+if 'category_list' not in st.session_state:   
+    st.session_state['category_list'] = category
 
-    st.subheader("**User**")
-    # user_df = recommendation_df.drop_duplicates('user_id')[['user_id']].reset_index(drop=True)
-    # user_option = user_df['user_id'].to_list()
+if 'store_list' not in st.session_state:   
+    st.session_state['store_list'] = store
 
-    # user_selected = st.selectbox("Please select an user", options = user_option)
+if 'clicked_store' not in st.session_state:   
+    st.session_state['clicked_store'] = False
 
-    if selected_model == "Wide & Deep Learning Model":
-        wide_deep_metric = pd.read_parquet('./data/evaluation/wide_deep_metric.parquet')
-        st.write("**User ID:** {selected_user}".format(selected_user=selected_user))
-        evaluation(wide_deep_metric, selected_user)
+if 'clicked_category' not in st.session_state:   
+    st.session_state['clicked_category'] = False
 
-    elif selected_model == "Matrix Factorization":
-        matrix_fact_metric = pd.read_parquet('./data/evaluation/matrix_fact_metric.parquet')
-        st.write(f"User ID: {selected_user}")
-        evaluation(matrix_fact_metric, selected_user)
+if 'store_list' not in st.session_state:   
+    st.session_state['store_list'] = "All Stores"
 
+if 'selected_user' not in st.session_state: 
+    st.session_state['selected_user'] = '0001'
+
+if 'selected_category' not in st.session_state:
+    st.session_state['selected_category'] = 'All Categories'
+
+if 'selected_store' not in st.session_state:
+    st.session_state['selected_store'] = 'All Stores'
+
+def update_store():
+    st.session_state['clicked_category'] = True
+
+    if st.session_state['clicked_store'] == False:
+        if st.session_state['selected_category'] != "All Categories":
+            temp_store_list = knn_recommend_items[knn_recommend_items['main_category'] == st.session_state['selected_category']]['store'].drop_duplicates().to_list()
+            st.session_state['store_list'] = ['All Stores'] + sorted(temp_store_list)
+        else:
+            st.session_state['store_list'] = store
     else:
-        st.write("**User ID:** {selected_user}".format(selected_user=selected_user))
+        pass
 
-    i = 0
-    
-    recommend_item = recommendation_df[recommendation_df.user_id == selected_user]
-    # st.dataframe(recommend_item)
+def update_category():
+    st.session_state['clicked_store'] = True
 
-    row1 = st.columns(5)
-    row2 = st.columns(5)
-    row3 = st.columns(5)
-    row4 = st.columns(5)
-    row5 = st.columns(5)
-    row6 = st.columns(5)
+    if st.session_state['clicked_category'] == False:
+        if st.session_state['category_list'] != 'All Stores':
+            temp_category_list = knn_recommend_items[knn_recommend_items['store'] == st.session_state['selected_store']]['main_category'].drop_duplicates().to_list()
+            st.session_state['category_list'] = ['All Categories'] + sorted(temp_category_list)
+        else:
+            st.session_state['category_list'] = category
+    else:
+        # start select subset data
+        pass
 
-    for col in row1 + row2 + row3 + row4 + row5 + row6:
-        tile = col.container(border=True,height=500)
+def show_recommended_items(recommended_df):
+    recommended_df = recommended_df.reset_index(drop=True)
+    # st.dataframe(recommended_df)
+    if len(recommended_df) > 0:
+        row_last_5txn = st.columns(len(recommended_df))
 
-        tile.image(
-            recommend_item.iloc[i]['images.large'][0], width=150,
-        )
+        for num, col in enumerate(row_last_5txn):
+            tile = col.container(border=True,height=300)
 
-        tile.write(f"**{recommend_item.iloc[i]['title']}**")
+            tile.image(
+                recommended_df.iloc[num]['images.large'][0], width=100, use_column_width='auto'
+            )
 
-        i+=1
+            if 'rating' in recommended_df.columns:
+                tile.write(f"Rating: {'{0:.2f}'.format(recommended_df.iloc[num]['rating'])}")
+            elif 'score' in recommended_df.columns:
+                tile.write(f"Predicted Rating: {'{0:.2f}'.format(recommended_df.iloc[num]['score'])}")
 
-if selected_model == "Wide & Deep Learning Model":
-    st.title(f"{selected_model}")
+            tile.write(f"**{recommended_df.iloc[num]['title']}**")
 
-    # evaluation metrics
-    wide_deep_metric = pd.read_parquet('./data/evaluation/wide_deep_metric.parquet')
-    df_evaluation_wide_deep_avg = pd.read_parquet('./data/evaluation/df_evaluation_wide_deep_avg.parquet')
+def clear_cache():
+    keys = list(st.session_state.keys())
+    for key in keys:
+        st.session_state.pop(key)
 
-    recommendation_df = pd.read_parquet('./data/recommendation/wide_deep_recommendation.parquet')
-    
-    st.subheader("**Model Evaluation**")
-    evaluation(wide_deep_metric, "model")
-    recommendation_page(recommendation_df, df_evaluation_wide_deep_avg, selected_model, selected_user)
+    st.session_state['selected_user'] = '0001'
+    st.session_state['selected_category'] = 'All Categories'
+    st.session_state['selected_store'] = 'All Stores'
+    st.session_state['clicked_category'] = False
+    st.session_state['clicked_store'] = False
+    st.session_state['user_list'] = user
+    st.session_state['category_list'] = category
+    st.session_state['store_list'] = store
+
+with st.sidebar:
+    selected_user = st.selectbox("User:", options = user, key="selected_user")
+    selected_category = st.selectbox("Category:", options = st.session_state['category_list'], key="selected_category", on_change=update_store)
+    selected_store = st.selectbox("Store Name:", options = st.session_state['store_list'], key="selected_store", on_change=update_category)
+
+    st.button('Reset', on_click=clear_cache)
+
+# Title
+st.title("Retail Recommendation System")
+
+st.subheader('Model Evaluation')
+
+model_results = user_evaluation_list[user_evaluation_list['user_id'] == 'model'].reset_index(drop=True)
+
+precision_recall_data = [['Wide & Deep Learning', 30, model_results.iloc[0]['wide_deep_precision'], model_results.iloc[0]['wide_deep_recall']], 
+                        ['K-Nearest Neighbors (KNN)', 30, model_results.iloc[0]['knn_precision'], model_results.iloc[0]['knn_recall']],
+                        ['Matrix Factorization', 30, model_results.iloc[0]['matrix_fact_precision'], model_results.iloc[0]['matrix_fact_recall']]]
+
+precision_recall_df = pd.DataFrame(precision_recall_data, columns=['Model', 'Top K', 'Precision@K', 'Recall@K'])
+
+metric_data = [['Wide & Deep Learning', round(model_results.iloc[0]['wide_deep_mae'],4), round(model_results.iloc[0]['wide_deep_mse'],4), round(model_results.iloc[0]['wide_deep_rmse'],4)], 
+                ['Matrix Factorization', round(model_results.iloc[0]['matrix_fact_mae'],4), round(model_results.iloc[0]['matrix_fact_mse'],4), round(model_results.iloc[0]['matrix_fact_rmse'],4)],
+                ['K-Nearest Neighbors (KNN)', '-', '-', '-']]
+
+metric_df = pd.DataFrame(metric_data, columns=['Model', 'MAE', 'MSE', 'RMSE'])
+
+df_rows = st.columns(2)
+df_rows[0].dataframe(precision_recall_df)
+df_rows[1].dataframe(metric_df)
+
+# st.dataframe(precision_recall_df)
+# st.dataframe(metric_df)
+
+# Last 5 transaction of users
+select_user_id = user_evaluation_list[user_evaluation_list.user_idx == st.session_state['selected_user']].reset_index(drop=True).iloc[0]['user_id']
+selected_user_last5_txn = user_last5_txn[user_last5_txn['user_id'] == select_user_id]
+
+st.subheader(f"Last 5 Transactions of User {st.session_state['selected_user']}")
+
+show_recommended_items(selected_user_last5_txn)
+
+if st.session_state['selected_category'] != 'All Categories':
+    cat_last5_txn = user_transactions[user_transactions['main_category'] == st.session_state['selected_category']].sort_values(['user_id', 'timestamp'],ascending=True).groupby(['user_id']).tail(5)
+    selected_user_cat_last5_txn = cat_last5_txn[cat_last5_txn['user_id'] == select_user_id].reset_index(drop=True)
+
+    if len(selected_user_cat_last5_txn) > 0:
+        st.subheader(f"Last {len(selected_user_cat_last5_txn)} Transactions in {st.session_state['selected_category']} of User {st.session_state['selected_user']}")
+        
+        row_last_5txn_cat = st.columns(len(selected_user_cat_last5_txn))
+
+        for num, col in enumerate(row_last_5txn_cat):
+            tile = col.container(border=True,height=300)
+
+            tile.image(
+                selected_user_cat_last5_txn.iloc[num]['images.large'][0], width=100,
+            )
+
+            tile.write(f"**{selected_user_cat_last5_txn.iloc[num]['title']}**")
+
+if (st.session_state['selected_category'] == 'All Categories' and st.session_state['selected_store'] == 'All Stores'):
+    selected_user_knn_top5 = knn_recommend_items[knn_recommend_items['user_id'] == select_user_id]
+    selected_user_knn_top5 = selected_user_knn_top5.sort_values(['user_id', 'score'],ascending=True).groupby(['user_id']).head(5).reset_index(drop=True)
+
+    selected_user_matrix_top5 = matrix_recommend_items[matrix_recommend_items['user_id'] == select_user_id]
+    selected_user_matrix_top5 = selected_user_matrix_top5.sort_values(['user_id', 'score'],ascending=False).groupby(['user_id']).head(5).reset_index(drop=True)
+
+    selected_user_wide_deep_top5 = wide_deep_recommend_items[wide_deep_recommend_items['user_id'] == select_user_id]
+    selected_user_wide_deep_top5 = selected_user_wide_deep_top5.sort_values(['user_id', 'score'],ascending=False).groupby(['user_id']).head(5).reset_index(drop=True)
+
+elif st.session_state['selected_category'] == 'All Categories':
+    selected_user_knn_top5 = knn_recommend_items[(knn_recommend_items['user_id'] == select_user_id) & (knn_recommend_items['store'] == st.session_state['selected_store'])]
+    selected_user_knn_top5 = selected_user_knn_top5.sort_values(['user_id', 'score'],ascending=True).groupby(['user_id']).head(5).reset_index(drop=True)
+
+    selected_user_matrix_top5 = matrix_recommend_items[(matrix_recommend_items['user_id'] == select_user_id) & (matrix_recommend_items['store'] == st.session_state['selected_store'])]
+    selected_user_matrix_top5 = selected_user_matrix_top5.sort_values(['user_id', 'score'],ascending=False).groupby(['user_id']).head(5).reset_index(drop=True)
+
+    selected_user_wide_deep_top5 = wide_deep_recommend_items[(wide_deep_recommend_items['user_id'] == select_user_id) & (wide_deep_recommend_items['store'] == st.session_state['selected_store'])]
+    selected_user_wide_deep_top5 = selected_user_wide_deep_top5.sort_values(['user_id', 'score'],ascending=False).groupby(['user_id']).head(5).reset_index(drop=True)
+
+elif st.session_state['selected_store'] == 'All Stores':
+    selected_user_knn_top5 = knn_recommend_items[(knn_recommend_items['user_id'] == select_user_id) & (knn_recommend_items['main_category'] == st.session_state['selected_category'])]
+    selected_user_knn_top5 = selected_user_knn_top5.sort_values(['user_id', 'score'],ascending=True).groupby(['user_id']).head(5).reset_index(drop=True)
+
+    selected_user_matrix_top5 = matrix_recommend_items[(matrix_recommend_items['user_id'] == select_user_id) & (matrix_recommend_items['main_category'] == st.session_state['selected_category'])]
+    selected_user_matrix_top5 = selected_user_matrix_top5.sort_values(['user_id', 'score'],ascending=False).groupby(['user_id']).head(5).reset_index(drop=True)
+
+    selected_user_wide_deep_top5 = wide_deep_recommend_items[(wide_deep_recommend_items['user_id'] == select_user_id) & (wide_deep_recommend_items['main_category'] == st.session_state['selected_category'])]
+    selected_user_wide_deep_top5 = selected_user_wide_deep_top5.sort_values(['user_id', 'score'],ascending=False).groupby(['user_id']).head(5).reset_index(drop=True)
+
+else:
+    selected_user_knn_top5 = knn_recommend_items[(knn_recommend_items['user_id'] == select_user_id) & (knn_recommend_items['store'] == st.session_state['selected_store']) & (knn_recommend_items['main_category'] == st.session_state['selected_category'])]
+    selected_user_knn_top5 = selected_user_knn_top5.sort_values(['user_id', 'score'],ascending=True).groupby(['user_id']).head(5).reset_index(drop=True)
+
+    selected_user_matrix_top5 = matrix_recommend_items[(matrix_recommend_items['user_id'] == select_user_id) & (matrix_recommend_items['store'] == st.session_state['selected_store']) & (matrix_recommend_items['main_category'] == st.session_state['selected_category'])]
+    selected_user_matrix_top5 = selected_user_matrix_top5.sort_values(['user_id', 'score'],ascending=False).groupby(['user_id']).head(5).reset_index(drop=True)
+
+    selected_user_wide_deep_top5 = wide_deep_recommend_items[(wide_deep_recommend_items['user_id'] == select_user_id) & (wide_deep_recommend_items['store'] == st.session_state['selected_store']) & (wide_deep_recommend_items['main_category'] == st.session_state['selected_category'])]
+    selected_user_wide_deep_top5 = selected_user_wide_deep_top5.sort_values(['user_id', 'score'],ascending=False).groupby(['user_id']).head(5).reset_index(drop=True)
+
+st.subheader(f"Recommended Products in {st.session_state['selected_category']} (Wide & Deep Learning)")
+
+wide_deep_user_score = user_evaluation_list[user_evaluation_list['user_id'] == select_user_id].reset_index(drop=True)
+wide_deep_mae = wide_deep_user_score.iloc[0]['wide_deep_mae']
+wide_deep_mse = wide_deep_user_score.iloc[0]['wide_deep_mse']
+wide_deep_rmse = wide_deep_user_score.iloc[0]['wide_deep_rmse']
+
+st.write("**Mean Absolute Error (MAE)**: {mae:.4f}, **Mean Squared Error (MSE)**: {mse:.4f}, **Root Mean Squared Error (RMSE)**: {rmse:.4f}"
+            .format(mae=wide_deep_mae, mse=wide_deep_mse, rmse=wide_deep_rmse))
+
+show_recommended_items(selected_user_wide_deep_top5)
+
+st.subheader(f"Recommended Products in {st.session_state['selected_category']} (KNN)")
+selected_user_knn_top5_ = selected_user_knn_top5.drop(columns = 'score')
+show_recommended_items(selected_user_knn_top5_)
+
+st.subheader(f"Recommended Products in {st.session_state['selected_category']} (Matrix Factorization)")
+
+matrix_fact_user_score = user_evaluation_list[user_evaluation_list['user_id'] == select_user_id].reset_index(drop=True)
+matrix_fact_mae = matrix_fact_user_score.iloc[0]['matrix_fact_mae']
+matrix_fact_mse = matrix_fact_user_score.iloc[0]['matrix_fact_mse']
+matrix_fact_rmse = matrix_fact_user_score.iloc[0]['matrix_fact_rmse']
+
+st.write("**Mean Absolute Error (MAE)**: {mae:.4f}, **Mean Squared Error (MSE)**: {mse:.4f}, **Root Mean Squared Error (RMSE)**: {rmse:.4f}"
+            .format(mae=matrix_fact_mae, mse=matrix_fact_mse, rmse=matrix_fact_rmse))
+
+show_recommended_items(selected_user_matrix_top5)
 
 
-if selected_model == "K-Nearest Neighbors (KNN)":
-    st.title(f"{selected_model}")
+# model_result = evaluation_df[evaluation_df.user_id == user_id].reset_index(drop=True)
 
-    # evaluation metrics
-    # wide_deep_metric = pd.read_parquet('./data/evaluation/wide_deep_metric.parquet')
-    df_evaluation_knn_avg = pd.read_parquet('./data/evaluation/df_evaluation_knn_avg.parquet')
+# mae = model_result.iloc[0]['mae']
+# mse = model_result.iloc[0]['mse']
+# rmse = model_result.iloc[0]['rmse']
 
-    recommendation_df = pd.read_parquet('./data/recommendation/knn_recommendation.parquet')
-    
-    st.subheader("**Model Evaluation**")
-    recommendation_page(recommendation_df, df_evaluation_knn_avg, selected_model, selected_user)
-
-if selected_model == "Matrix Factorization":
-    st.title(f"{selected_model}")
-
-    # evaluation metrics
-    matrix_fact_metric = pd.read_parquet('./data/evaluation/matrix_fact_metric.parquet')
-    df_evaluation_matrix_fact_avg = pd.read_parquet('./data/evaluation/df_evaluation_matric_fact_avg.parquet')
-
-    recommendation_df = pd.read_parquet('./data/recommendation/matrix_fact_recommendation.parquet')
-    
-    st.subheader("**Model Evaluation**")
-    evaluation(matrix_fact_metric, "model")
-    recommendation_page(recommendation_df, df_evaluation_matrix_fact_avg, selected_model, selected_user)
-
+# st.write("**Mean Absolute Error (MAE)**: {mae:.4f}, **Mean Squared Error (MSE)**: {mse:.4f}, **Root Mean Squared Error (RMSE)**: {rmse:.4f}"
+#             .format(mae=mae, mse=mse, rmse=rmse))
