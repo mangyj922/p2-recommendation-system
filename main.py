@@ -19,9 +19,11 @@ knn_recommend_items = pd.read_parquet('./data/recommendation/knn_recommend_items
 matrix_recommend_items = pd.read_parquet('./data/recommendation/matrix_recommend_items.parquet')
 wide_deep_recommend_items = pd.read_parquet('./data/recommendation/wide_deep_recommend_items.parquet')
 
+store_list = pd.read_parquet('./data/user_evaluation/store_list.parquet')
+
 user = user_evaluation_list[user_evaluation_list['user_id'] != 'model']['user_idx'].dropna().to_list()
-category = ['All Categories'] + sorted(knn_recommend_items['main_category'].drop_duplicates().to_list())
-store = ['All Stores'] + sorted(knn_recommend_items['store'].drop_duplicates().to_list())
+category = ['All Categories'] + sorted(store_list['main_category'].drop_duplicates().to_list())
+store = ['All Stores'] + sorted(store_list['store'].drop_duplicates().to_list())
 
 if 'user_list' not in st.session_state:   
     st.session_state['user_list'] = user
@@ -55,7 +57,7 @@ def update_store():
 
     if st.session_state['clicked_store'] == False:
         if st.session_state['selected_category'] != "All Categories":
-            temp_store_list = knn_recommend_items[knn_recommend_items['main_category'] == st.session_state['selected_category']]['store'].drop_duplicates().to_list()
+            temp_store_list = store_list[store_list['main_category'] == st.session_state['selected_category']]['store'].drop_duplicates().to_list()
             st.session_state['store_list'] = ['All Stores'] + sorted(temp_store_list)
         else:
             st.session_state['store_list'] = store
@@ -67,7 +69,7 @@ def update_category():
 
     if st.session_state['clicked_category'] == False:
         if st.session_state['category_list'] != 'All Stores':
-            temp_category_list = knn_recommend_items[knn_recommend_items['store'] == st.session_state['selected_store']]['main_category'].drop_duplicates().to_list()
+            temp_category_list = store_list[store_list['store'] == st.session_state['selected_store']]['main_category'].drop_duplicates().to_list()
             st.session_state['category_list'] = ['All Categories'] + sorted(temp_category_list)
         else:
             st.session_state['category_list'] = category
@@ -157,28 +159,9 @@ if st.session_state['selected_category'] != 'All Categories':
     cat_last5_txn = user_transactions[user_transactions['main_category'] == st.session_state['selected_category']].sort_values(['user_id', 'timestamp'],ascending=True).groupby(['user_id']).tail(5)
     selected_user_cat_last5_txn = cat_last5_txn[cat_last5_txn['user_id'] == select_user_id].reset_index(drop=True)
 
-    if len(selected_user_cat_last5_txn) > 0:
-        st.subheader(f"Last {len(selected_user_cat_last5_txn)} Transactions in {st.session_state['selected_category']} of User {st.session_state['selected_user']}")
-        
-        row_last_5txn_cat = st.columns(len(selected_user_cat_last5_txn))
+    st.subheader(f"Last {len(selected_user_cat_last5_txn)} Transactions in {st.session_state['selected_category']} of User {st.session_state['selected_user']}")
 
-        # st.dataframe(selected_user_cat_last5_txn)
-
-        for num, col in enumerate(row_last_5txn_cat):
-            tile = col.container(border=True,height=300)
-
-            tile.image(
-                selected_user_cat_last5_txn.iloc[num]['images.large'][0], width=100,
-            )
-
-            tile.write(f"Rating: {'{0:.2f}'.format(selected_user_cat_last5_txn.iloc[num]['rating'])}")
-
-            tile.write(f"**{selected_user_cat_last5_txn.iloc[num]['title']}**")
-
-    else:
-        st.subheader(f"Last {len(selected_user_cat_last5_txn)} Transactions in {st.session_state['selected_category']} of User {st.session_state['selected_user']}")
-        st.error('No Product Found', icon="🚨")
-        # st.error('No Product Found')
+    show_recommended_items(selected_user_cat_last5_txn)
 
 selected_user_knn_top5 = knn_recommend_items[knn_recommend_items['user_id'] == select_user_id]
 selected_user_matrix_top5 = matrix_recommend_items[matrix_recommend_items['user_id'] == select_user_id]
