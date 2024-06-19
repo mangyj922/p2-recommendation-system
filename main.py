@@ -95,8 +95,9 @@ def show_recommended_items(recommended_df):
 
             tile.write(f"**{recommended_df.iloc[num]['title']}**")
     else:
+        st.write("Error")
         # st.error('No Product Found', icon="🚨")
-        st.error('No Product Found')
+        # st.error('No Product Found')
 
 def clear_cache():
     keys = list(st.session_state.keys())
@@ -177,8 +178,9 @@ if st.session_state['selected_category'] != 'All Categories':
 
     else:
         st.subheader(f"Last {len(selected_user_cat_last5_txn)} Transactions in {st.session_state['selected_category']} of User {st.session_state['selected_user']}")
+        st.write("Error")
         # st.error('No Product Found', icon="🚨")
-        st.error('No Product Found')
+        # st.error('No Product Found')
 
 if (st.session_state['selected_category'] == 'All Categories' and st.session_state['selected_store'] == 'All Stores'):
     selected_user_knn_top5 = knn_recommend_items[knn_recommend_items['user_id'] == select_user_id]
