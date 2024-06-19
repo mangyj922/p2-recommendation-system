@@ -95,8 +95,7 @@ def show_recommended_items(recommended_df):
 
             tile.write(f"**{recommended_df.iloc[num]['title']}**")
     else:
-        st.write("Error")
-        # st.error('No Product Found', icon="🚨")
+         st.error('No Product Found', icon="🚨")
         # st.error('No Product Found')
 
 def clear_cache():
@@ -178,48 +177,51 @@ if st.session_state['selected_category'] != 'All Categories':
 
     else:
         st.subheader(f"Last {len(selected_user_cat_last5_txn)} Transactions in {st.session_state['selected_category']} of User {st.session_state['selected_user']}")
-        st.write("Error")
-        # st.error('No Product Found', icon="🚨")
+        st.error('No Product Found', icon="🚨")
         # st.error('No Product Found')
 
+selected_user_knn_top5 = knn_recommend_items[knn_recommend_items['user_id'] == select_user_id]
+selected_user_matrix_top5 = matrix_recommend_items[matrix_recommend_items['user_id'] == select_user_id]
+selected_user_wide_deep_top5 = wide_deep_recommend_items[wide_deep_recommend_items['user_id'] == select_user_id]
+
 if (st.session_state['selected_category'] == 'All Categories' and st.session_state['selected_store'] == 'All Stores'):
-    selected_user_knn_top5 = knn_recommend_items[knn_recommend_items['user_id'] == select_user_id]
     selected_user_knn_top5 = selected_user_knn_top5.sort_values(['user_id', 'score'],ascending=True).groupby(['user_id']).head(5).reset_index(drop=True)
 
-    selected_user_matrix_top5 = matrix_recommend_items[matrix_recommend_items['user_id'] == select_user_id]
     selected_user_matrix_top5 = selected_user_matrix_top5.sort_values(['user_id', 'score'],ascending=False).groupby(['user_id']).head(5).reset_index(drop=True)
 
-    selected_user_wide_deep_top5 = wide_deep_recommend_items[wide_deep_recommend_items['user_id'] == select_user_id]
     selected_user_wide_deep_top5 = selected_user_wide_deep_top5.sort_values(['user_id', 'score'],ascending=False).groupby(['user_id']).head(5).reset_index(drop=True)
 
 elif st.session_state['selected_category'] == 'All Categories':
-    selected_user_knn_top5 = knn_recommend_items[(knn_recommend_items['user_id'] == select_user_id) & (knn_recommend_items['store'] == st.session_state['selected_store'])]
+    selected_user_knn_top5 = selected_user_knn_top5[(knn_recommend_items['store'] == st.session_state['selected_store'])]
     selected_user_knn_top5 = selected_user_knn_top5.sort_values(['user_id', 'score'],ascending=True).groupby(['user_id']).head(5).reset_index(drop=True)
 
-    selected_user_matrix_top5 = matrix_recommend_items[(matrix_recommend_items['user_id'] == select_user_id) & (matrix_recommend_items['store'] == st.session_state['selected_store'])]
+    selected_user_matrix_top5 = selected_user_matrix_top5[(selected_user_matrix_top5['store'] == st.session_state['selected_store'])]
     selected_user_matrix_top5 = selected_user_matrix_top5.sort_values(['user_id', 'score'],ascending=False).groupby(['user_id']).head(5).reset_index(drop=True)
 
-    selected_user_wide_deep_top5 = wide_deep_recommend_items[(wide_deep_recommend_items['user_id'] == select_user_id) & (wide_deep_recommend_items['store'] == st.session_state['selected_store'])]
+    selected_user_wide_deep_top5 = selected_user_wide_deep_top5[(wide_deep_recommend_items['store'] == st.session_state['selected_store'])]
     selected_user_wide_deep_top5 = selected_user_wide_deep_top5.sort_values(['user_id', 'score'],ascending=False).groupby(['user_id']).head(5).reset_index(drop=True)
 
 elif st.session_state['selected_store'] == 'All Stores':
-    selected_user_knn_top5 = knn_recommend_items[(knn_recommend_items['user_id'] == select_user_id) & (knn_recommend_items['main_category'] == st.session_state['selected_category'])]
+    selected_user_knn_top5 = selected_user_knn_top5[(selected_user_knn_top5['main_category'] == st.session_state['selected_category'])]
     selected_user_knn_top5 = selected_user_knn_top5.sort_values(['user_id', 'score'],ascending=True).groupby(['user_id']).head(5).reset_index(drop=True)
 
-    selected_user_matrix_top5 = matrix_recommend_items[(matrix_recommend_items['user_id'] == select_user_id) & (matrix_recommend_items['main_category'] == st.session_state['selected_category'])]
+    selected_user_matrix_top5 = selected_user_matrix_top5[(selected_user_matrix_top5['main_category'] == st.session_state['selected_category'])]
     selected_user_matrix_top5 = selected_user_matrix_top5.sort_values(['user_id', 'score'],ascending=False).groupby(['user_id']).head(5).reset_index(drop=True)
 
-    selected_user_wide_deep_top5 = wide_deep_recommend_items[(wide_deep_recommend_items['user_id'] == select_user_id) & (wide_deep_recommend_items['main_category'] == st.session_state['selected_category'])]
+    selected_user_wide_deep_top5 = selected_user_wide_deep_top5[(selected_user_wide_deep_top5['main_category'] == st.session_state['selected_category'])]
     selected_user_wide_deep_top5 = selected_user_wide_deep_top5.sort_values(['user_id', 'score'],ascending=False).groupby(['user_id']).head(5).reset_index(drop=True)
 
 else:
-    selected_user_knn_top5 = knn_recommend_items[(knn_recommend_items['user_id'] == select_user_id) & (knn_recommend_items['store'] == st.session_state['selected_store']) & (knn_recommend_items['main_category'] == st.session_state['selected_category'])]
+    selected_user_knn_top5 = selected_user_knn_top5[(knn_recommend_items['main_category'] == st.session_state['selected_category'])]
+    selected_user_knn_top5 = selected_user_knn_top5[(selected_user_knn_top5['store'] == st.session_state['selected_store'])]
     selected_user_knn_top5 = selected_user_knn_top5.sort_values(['user_id', 'score'],ascending=True).groupby(['user_id']).head(5).reset_index(drop=True)
 
-    selected_user_matrix_top5 = matrix_recommend_items[(matrix_recommend_items['user_id'] == select_user_id) & (matrix_recommend_items['store'] == st.session_state['selected_store']) & (matrix_recommend_items['main_category'] == st.session_state['selected_category'])]
+    selected_user_matrix_top5 = selected_user_matrix_top5[(selected_user_matrix_top5['main_category'] == st.session_state['selected_category'])]
+    selected_user_matrix_top5 = selected_user_matrix_top5[(selected_user_matrix_top5['store'] == st.session_state['selected_store'])]
     selected_user_matrix_top5 = selected_user_matrix_top5.sort_values(['user_id', 'score'],ascending=False).groupby(['user_id']).head(5).reset_index(drop=True)
 
-    selected_user_wide_deep_top5 = wide_deep_recommend_items[(wide_deep_recommend_items['user_id'] == select_user_id) & (wide_deep_recommend_items['store'] == st.session_state['selected_store']) & (wide_deep_recommend_items['main_category'] == st.session_state['selected_category'])]
+    selected_user_wide_deep_top5 = selected_user_wide_deep_top5[(selected_user_wide_deep_top5['main_category'] == st.session_state['selected_category'])]
+    selected_user_wide_deep_top5 = selected_user_wide_deep_top5[(selected_user_wide_deep_top5['store'] == st.session_state['selected_store'])]
     selected_user_wide_deep_top5 = selected_user_wide_deep_top5.sort_values(['user_id', 'score'],ascending=False).groupby(['user_id']).head(5).reset_index(drop=True)
 
 st.subheader(f"Recommended Products in {st.session_state['selected_category']} (Wide & Deep Learning)")
