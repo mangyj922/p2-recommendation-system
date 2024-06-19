@@ -129,8 +129,8 @@ precision_recall_data = [['Wide & Deep Learning', 30, model_results.iloc[0]['wid
 
 precision_recall_df = pd.DataFrame(precision_recall_data, columns=['Model', 'Top K', 'Precision@K', 'Recall@K'])
 
-metric_data = [['Wide & Deep Learning', round(model_results.iloc[0]['wide_deep_mae'],4), round(model_results.iloc[0]['wide_deep_mse'],4), round(model_results.iloc[0]['wide_deep_rmse'],4)], 
-                ['Matrix Factorization', round(model_results.iloc[0]['matrix_fact_mae'],4), round(model_results.iloc[0]['matrix_fact_mse'],4), round(model_results.iloc[0]['matrix_fact_rmse'],4)],
+metric_data = [['Wide & Deep Learning', (round(model_results.iloc[0]['wide_deep_mae'],4)).astype(str), (round(model_results.iloc[0]['wide_deep_mse'],4)).astype(str), (round(model_results.iloc[0]['wide_deep_rmse'],4)).astype(str)], 
+                ['Matrix Factorization', (round(model_results.iloc[0]['matrix_fact_mae'],4)).astype(str), (round(model_results.iloc[0]['matrix_fact_mse'],4)).astype(str), (round(model_results.iloc[0]['matrix_fact_rmse'],4)).astype(str)],
                 ['K-Nearest Neighbors (KNN)', '-', '-', '-']]
 
 metric_df = pd.DataFrame(metric_data, columns=['Model', 'MAE', 'MSE', 'RMSE'])
