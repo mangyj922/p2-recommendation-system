@@ -15,9 +15,9 @@ user_evaluation_list['user_idx'] = user_evaluation_list['user_idx'].astype(str).
 user_transactions = pd.read_parquet('./data/user_evaluation/user_transactions.parquet')
 user_last5_txn = user_transactions.sort_values(['user_id', 'timestamp'],ascending=True).groupby(['user_id']).tail(5)
 
-knn_recommend_items = pd.read_parquet('./data/recommendation/knn_recommend_items.parquet')
-matrix_recommend_items = pd.read_parquet('./data/recommendation/matrix_recommend_items.parquet')
-wide_deep_recommend_items = pd.read_parquet('./data/recommendation/wide_deep_recommend_items.parquet')
+knn_recommend_items = pd.read_parquet('./data/recommendation/knn_recommend_items_top500.parquet')
+matrix_recommend_items = pd.read_parquet('./data/recommendation/matrix_recommend_items_top500.parquet')
+wide_deep_recommend_items = pd.read_parquet('./data/recommendation/wide_deep_recommend_items_top500.parquet')
 
 store_list = pd.read_parquet('./data/user_evaluation/store_list.parquet')
 
@@ -86,9 +86,12 @@ def show_recommended_items(recommended_df):
         for num, col in enumerate(row_last_5txn):
             tile = col.container(border=True,height=300)
 
-            tile.image(
-                recommended_df.iloc[num]['images.large'][0], width=100
-            )
+            try:
+                img_url = recommended_df.iloc[num]['images.large'][0]
+            except IndexError:
+                img_url = 'https://demofree.sirv.com/products/123456/123456.jpg?profile=error-example'
+
+            tile.image(img_url, width=100)
 
             if 'rating' in recommended_df.columns:
                 tile.write(f"Rating: {'{0:.2f}'.format(recommended_df.iloc[num]['rating'])}")
@@ -221,6 +224,7 @@ show_recommended_items(selected_user_wide_deep_top5)
 
 st.subheader(f"Recommended Products in {st.session_state['selected_category']} (KNN)")
 selected_user_knn_top5_ = selected_user_knn_top5.drop(columns = 'score')
+# st.dataframe(selected_user_knn_top5_)
 show_recommended_items(selected_user_knn_top5_)
 
 st.subheader(f"Recommended Products in {st.session_state['selected_category']} (Matrix Factorization)")
