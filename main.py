@@ -85,7 +85,7 @@ def show_recommended_items(recommended_df):
             tile = col.container(border=True,height=300)
 
             tile.image(
-                recommended_df.iloc[num]['images.large'][0], width=100, use_column_width='auto'
+                recommended_df.iloc[num]['images.large'][0], width=100
             )
 
             if 'rating' in recommended_df.columns:
@@ -159,12 +159,16 @@ if st.session_state['selected_category'] != 'All Categories':
         
         row_last_5txn_cat = st.columns(len(selected_user_cat_last5_txn))
 
+        # st.dataframe(selected_user_cat_last5_txn)
+
         for num, col in enumerate(row_last_5txn_cat):
             tile = col.container(border=True,height=300)
 
             tile.image(
                 selected_user_cat_last5_txn.iloc[num]['images.large'][0], width=100,
             )
+
+            tile.write(f"Rating: {'{0:.2f}'.format(selected_user_cat_last5_txn.iloc[num]['rating'])}")
 
             tile.write(f"**{selected_user_cat_last5_txn.iloc[num]['title']}**")
 
