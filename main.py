@@ -100,7 +100,10 @@ def show_recommended_items(recommended_df):
 
             tile.write(f"**{recommended_df.iloc[num]['title']}**")
     else:
-         st.error('No Product Found', icon="🚨")
+        if 'rating' in recommended_df.columns:
+            st.error('No Transaction in {cat}'.format(cat=st.session_state['selected_category']), icon="🚨")
+        else:
+            st.error('No Product Found', icon="🚨")
         # st.error('No Product Found')
 
 def clear_cache():
